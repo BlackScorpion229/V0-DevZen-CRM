@@ -8,14 +8,14 @@ export interface Vendor {
   company: string
   email: string
   phone: string
-  website?: string // New field
-  address?: string // New field
+  website?: string
+  address?: string
   contacts: VendorContact[]
   status: "active" | "inactive"
-  category?: string // New field: categorize vendors
-  notes?: string // New field
+  category?: string
+  notes?: string
   createdAt: Date
-  updatedAt?: Date // New field
+  updatedAt?: Date
 }
 
 export interface VendorContact {
@@ -24,9 +24,9 @@ export interface VendorContact {
   email: string
   phone: string
   designation: string
-  department?: string // New field
-  isMainContact?: boolean // New field
-  lastContactedDate?: Date // New field
+  department?: string
+  isMainContact?: boolean
+  lastContactedDate?: Date
 }
 
 // Resource Module
@@ -39,12 +39,12 @@ export interface Resource {
   experience: number
   type: "InHouse" | "InHouse-Friends" | "External-LinkedIn" | "External-Email"
   status: "available" | "busy" | "inactive"
-  hourlyRate?: number // New field
-  location?: string // New field
-  remoteAvailability?: boolean // New field
-  startDate?: Date // New field: when they joined/became available
-  skills?: { name: string; level: "beginner" | "intermediate" | "expert" }[] // New field: detailed skills
-  certifications?: string[] // New field
+  hourlyRate?: number
+  location?: string
+  remoteAvailability?: boolean
+  startDate?: Date
+  skills?: { name: string; level: "beginner" | "intermediate" | "expert" }[]
+  certifications?: string[]
   resumeFile?: string
   resumeMetadata?: {
     url: string
@@ -55,29 +55,32 @@ export interface Resource {
     filename: string
   }
   createdAt: Date
-  updatedAt?: Date // New field
+  updatedAt?: Date
 }
 
 // Job Requirement Module
 export interface JobRequirement {
   id: string
   title: string
-  vendorId: string
-  contactId: string
-  techStack: string[]
-  experience: string
   description: string
-  status: "active" | "inactive" | "closed" | "onhold"
-  priority?: "low" | "medium" | "high" | "urgent" // New field
-  jobType?: "full-time" | "contract" | "part-time" // New field
-  remoteOption?: boolean // New field
-  location?: string // New field
-  salary?: { min: number; max: number; currency: string } // New field
-  startDate?: Date // New field
-  endDate?: Date // New field for contract positions
-  assignedResources: string[]
+  techStack: string[]
+  experience: number
+  location?: string
+  remoteAvailable?: boolean
+  budget?: number
+  duration?: string
+  priority: "low" | "medium" | "high"
+  status: "open" | "in-progress" | "filled" | "cancelled"
+  clientName?: string
+  contactPerson?: string
+  contactEmail?: string
+  contactPhone?: string
+  startDate?: Date
+  endDate?: Date
+  requirements?: string[]
+  benefits?: string[]
   createdAt: Date
-  updatedAt?: Date // New field
+  updatedAt?: Date
 }
 
 // Process Flow Module
@@ -95,14 +98,37 @@ export interface ProcessFlow {
     | "cleared"
     | "rejected"
   scheduledDate?: Date
-  completedDate?: Date // New field
-  interviewers?: string[] // New field
-  feedbackScore?: number // New field: 1-5 rating
-  feedbackNotes?: string // New field
-  nextSteps?: string // New field
   notes: string
   updatedAt: Date
-  updatedBy?: string // New field
+  updatedBy?: string
+}
+
+// File Management Module
+export interface FileCategory {
+  id: string
+  name: string
+  description?: string
+  parentId?: string
+  createdAt: Date
+  updatedAt?: Date
+}
+
+export interface FileItem {
+  id: string
+  name: string
+  originalFilename: string
+  description?: string
+  categoryId?: string
+  size: number
+  contentType: string
+  pathname: string
+  url: string
+  entityType?: "vendor" | "resource" | "job" | "process" | "other"
+  entityId?: string
+  tags?: string[]
+  uploadedBy: string
+  uploadedAt: Date
+  updatedAt?: Date
 }
 
 interface DatabaseState {
@@ -111,6 +137,8 @@ interface DatabaseState {
   jobRequirements: JobRequirement[]
   processFlows: ProcessFlow[]
   techStackSkills: string[]
+  fileCategories: FileCategory[]
+  files: FileItem[]
   addVendor: (vendor: Omit<Vendor, "id" | "createdAt" | "updatedAt">) => void
   updateVendor: (id: string, vendor: Partial<Vendor>) => void
   deleteVendor: (id: string) => void
@@ -125,6 +153,15 @@ interface DatabaseState {
   deleteProcessFlow: (id: string) => void
   addTechStackSkill: (skill: string) => void
   searchAll: (query: string) => { vendors: Vendor[]; resources: Resource[]; jobs: JobRequirement[] }
+  addFileCategory: (category: Omit<FileCategory, "id" | "createdAt" | "updatedAt">) => void
+  updateFileCategory: (id: string, category: Partial<FileCategory>) => void
+  deleteFileCategory: (id: string) => void
+  addFile: (file: Omit<FileItem, "id" | "updatedAt">) => void
+  updateFile: (id: string, file: Partial<FileItem>) => void
+  deleteFile: (id: string) => void
+  getFilesByEntity: (entityType: FileItem["entityType"], entityId: string) => FileItem[]
+  getFilesByCategory: (categoryId: string) => FileItem[]
+  searchFiles: (query: string) => FileItem[]
 }
 
 export const useDatabase = create<DatabaseState>()(
@@ -194,20 +231,23 @@ export const useDatabase = create<DatabaseState>()(
         {
           id: "1",
           title: "Senior React Developer",
-          vendorId: "1",
-          contactId: "1",
-          techStack: ["React", "TypeScript", "Node.js"],
-          experience: "5+ years",
           description: "Looking for a senior React developer with strong TypeScript skills",
-          status: "active",
+          techStack: ["React", "TypeScript", "Node.js"],
+          experience: 5,
+          location: "San Francisco, CA",
+          remoteAvailable: true,
+          budget: 150000,
+          duration: "6 months",
           priority: "high",
-          jobType: "contract",
-          remoteOption: true,
-          location: "San Francisco, CA (Remote)",
-          salary: { min: 120000, max: 150000, currency: "USD" },
+          status: "open",
+          clientName: "TechCorp Inc.",
+          contactPerson: "John Smith",
+          contactEmail: "john@techcorp.com",
+          contactPhone: "+1-555-0102",
           startDate: new Date("2024-02-15"),
           endDate: new Date("2024-08-15"),
-          assignedResources: ["1"],
+          requirements: ["5+ years React experience", "TypeScript proficiency", "Team leadership"],
+          benefits: ["Health insurance", "Remote work", "Flexible hours"],
           createdAt: new Date("2024-01-20"),
           updatedAt: new Date(),
         },
@@ -219,11 +259,6 @@ export const useDatabase = create<DatabaseState>()(
           resourceId: "1",
           status: "resume-submitted",
           scheduledDate: new Date("2024-01-25"),
-          completedDate: new Date("2024-01-22"),
-          interviewers: ["John Smith", "Technical Team Lead"],
-          feedbackScore: 4,
-          feedbackNotes: "Strong technical skills, good communication",
-          nextSteps: "Schedule technical screening",
           notes: "Resume submitted to client",
           updatedAt: new Date("2024-01-22"),
           updatedBy: "admin",
@@ -246,6 +281,86 @@ export const useDatabase = create<DatabaseState>()(
         "Rust",
         "Swift",
         "Kotlin",
+      ],
+      fileCategories: [
+        {
+          id: "1",
+          name: "Vendor Documents",
+          description: "Documents related to vendors",
+          createdAt: new Date("2024-01-15"),
+        },
+        {
+          id: "2",
+          name: "Resource Resumes",
+          description: "Resumes and CVs of resources",
+          createdAt: new Date("2024-01-15"),
+        },
+        {
+          id: "3",
+          name: "Job Requirements",
+          description: "Job descriptions and requirements",
+          createdAt: new Date("2024-01-15"),
+        },
+        {
+          id: "4",
+          name: "Contracts",
+          description: "Legal contracts and agreements",
+          createdAt: new Date("2024-01-15"),
+        },
+        {
+          id: "5",
+          name: "Miscellaneous",
+          description: "Other documents",
+          createdAt: new Date("2024-01-15"),
+        },
+      ],
+      files: [
+        {
+          id: "1",
+          name: "TechCorp Agreement",
+          originalFilename: "techcorp_agreement_2024.pdf",
+          description: "Service agreement with TechCorp",
+          categoryId: "1",
+          size: 2500000,
+          contentType: "application/pdf",
+          pathname: "contracts/techcorp_agreement_2024.pdf",
+          url: "https://example.com/files/techcorp_agreement_2024.pdf",
+          entityType: "vendor",
+          entityId: "1",
+          tags: ["agreement", "contract", "2024"],
+          uploadedBy: "admin",
+          uploadedAt: new Date("2024-01-20"),
+        },
+        {
+          id: "2",
+          name: "Alice Cooper Resume",
+          originalFilename: "alice_cooper_resume.pdf",
+          categoryId: "2",
+          size: 1500000,
+          contentType: "application/pdf",
+          pathname: "resumes/alice_cooper_resume.pdf",
+          url: "https://example.com/files/alice_cooper_resume.pdf",
+          entityType: "resource",
+          entityId: "1",
+          tags: ["resume", "developer"],
+          uploadedBy: "admin",
+          uploadedAt: new Date("2024-01-10"),
+        },
+        {
+          id: "3",
+          name: "Senior React Developer JD",
+          originalFilename: "senior_react_developer_jd.docx",
+          categoryId: "3",
+          size: 500000,
+          contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          pathname: "jobs/senior_react_developer_jd.docx",
+          url: "https://example.com/files/senior_react_developer_jd.docx",
+          entityType: "job",
+          entityId: "1",
+          tags: ["job description", "react", "senior"],
+          uploadedBy: "admin",
+          uploadedAt: new Date("2024-01-18"),
+        },
       ],
 
       addVendor: (vendor) =>
@@ -324,6 +439,64 @@ export const useDatabase = create<DatabaseState>()(
           techStackSkills: [...new Set([...state.techStackSkills, skill])],
         })),
 
+      addFileCategory: (category) =>
+        set((state) => ({
+          fileCategories: [
+            ...state.fileCategories,
+            { ...category, id: Date.now().toString(), createdAt: new Date(), updatedAt: new Date() },
+          ],
+        })),
+
+      updateFileCategory: (id, category) =>
+        set((state) => ({
+          fileCategories: state.fileCategories.map((c) =>
+            c.id === id ? { ...c, ...category, updatedAt: new Date() } : c,
+          ),
+        })),
+
+      deleteFileCategory: (id) =>
+        set((state) => ({
+          fileCategories: state.fileCategories.filter((c) => c.id !== id),
+        })),
+
+      addFile: (file) =>
+        set((state) => ({
+          files: [...state.files, { ...file, id: Date.now().toString(), updatedAt: new Date() }],
+        })),
+
+      updateFile: (id, file) =>
+        set((state) => ({
+          files: state.files.map((f) => (f.id === id ? { ...f, ...file, updatedAt: new Date() } : f)),
+        })),
+
+      deleteFile: (id) =>
+        set((state) => ({
+          files: state.files.filter((f) => f.id !== id),
+        })),
+
+      getFilesByEntity: (entityType, entityId) => {
+        const state = get()
+        return state.files.filter((file) => file.entityType === entityType && file.entityId === entityId)
+      },
+
+      getFilesByCategory: (categoryId) => {
+        const state = get()
+        return state.files.filter((file) => file.categoryId === categoryId)
+      },
+
+      searchFiles: (query) => {
+        const state = get()
+        const lowerQuery = query.toLowerCase()
+
+        return state.files.filter(
+          (file) =>
+            file.name.toLowerCase().includes(lowerQuery) ||
+            file.originalFilename.toLowerCase().includes(lowerQuery) ||
+            (file.description && file.description.toLowerCase().includes(lowerQuery)) ||
+            (file.tags && file.tags.some((tag) => tag.toLowerCase().includes(lowerQuery))),
+        )
+      },
+
       searchAll: (query) => {
         const state = get()
         const lowerQuery = query.toLowerCase()
@@ -351,8 +524,7 @@ export const useDatabase = create<DatabaseState>()(
             j.title.toLowerCase().includes(lowerQuery) ||
             j.description.toLowerCase().includes(lowerQuery) ||
             j.techStack.some((tech) => tech.toLowerCase().includes(lowerQuery)) ||
-            (j.location && j.location.toLowerCase().includes(lowerQuery)) ||
-            (j.jobType && j.jobType.toLowerCase().includes(lowerQuery)),
+            (j.location && j.location.toLowerCase().includes(lowerQuery)),
         )
 
         return { vendors, resources, jobs }

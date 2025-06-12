@@ -18,6 +18,7 @@ interface FileUploadProps {
   isUploading?: boolean
   uploadProgress?: number
   onRemove?: () => void
+  multiple?: boolean
 }
 
 export function FileUpload({
@@ -30,6 +31,7 @@ export function FileUpload({
   isUploading = false,
   uploadProgress = 0,
   onRemove,
+  multiple = false,
 }: FileUploadProps) {
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,22 +54,24 @@ export function FileUpload({
       return false
     }
 
-    // Check file type
-    const fileType = file.type
-    const validTypes = accept.split(",").map((type) => {
-      if (type.startsWith(".")) {
-        // Convert extension to MIME type if possible
-        if (type === ".pdf") return "application/pdf"
-        if (type === ".doc") return "application/msword"
-        if (type === ".docx") return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    // Check file type if accept is specified
+    if (accept !== "*/*") {
+      const fileType = file.type
+      const validTypes = accept.split(",").map((type) => {
+        if (type.startsWith(".")) {
+          // Convert extension to MIME type if possible
+          if (type === ".pdf") return "application/pdf"
+          if (type === ".doc") return "application/msword"
+          if (type === ".docx") return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          return type
+        }
         return type
-      }
-      return type
-    })
+      })
 
-    if (!validTypes.includes(fileType) && !validTypes.some((type) => file.name.endsWith(type))) {
-      setError(`Invalid file type. Accepted types: ${accept}`)
-      return false
+      if (!validTypes.includes(fileType) && !validTypes.some((type) => file.name.endsWith(type))) {
+        setError(`Invalid file type. Accepted types: ${accept}`)
+        return false
+      }
     }
 
     setError(null)
@@ -105,12 +109,6 @@ export function FileUpload({
     onRemove?.()
   }
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + " B"
-    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB"
-    else return (bytes / 1048576).toFixed(1) + " MB"
-  }
-
   // If we have a file already
   if (value && fileUrl) {
     return (
@@ -121,35 +119,19 @@ export function FileUpload({
               <FileTextIcon className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <p className="font-medium text-sm">{filename || "Resume"}</p>
-              <p className="text-xs text-muted-foreground">{value.split(".").pop()?.toUpperCase()} file</p>
+              <p className="text-sm font-medium">{filename || "File"}</p>
+              <p className="text-xs text-muted-foreground">Uploaded</p>
             </div>
           </div>
           <div className="flex space-x-2">
-            <Button variant="outline" size="sm" onClick={() => window.open(fileUrl, "_blank")}>
-              <DownloadIcon className="h-4 w-4 mr-1" />
-              View
+            <Button variant="outline" size="sm" asChild>
+              <a href={fileUrl} download={filename} target="_blank" rel="noopener noreferrer">
+                <DownloadIcon className="h-4 w-4" />
+              </a>
             </Button>
             <Button variant="outline" size="sm" onClick={handleRemove}>
               <XIcon className="h-4 w-4" />
             </Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // If file is uploading
-  if (isUploading) {
-    return (
-      <div className="border rounded-md p-4">
-        <div className="flex items-center space-x-3">
-          <div className="bg-blue-100 p-2 rounded-md">
-            <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
-          </div>
-          <div className="flex-1">
-            <p className="font-medium text-sm">Uploading resume...</p>
-            <Progress value={uploadProgress} className="h-2 mt-2" />
           </div>
         </div>
       </div>
@@ -162,7 +144,7 @@ export function FileUpload({
         className={cn(
           "border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center cursor-pointer",
           dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25",
-          error && "border-red-500",
+          error && "border-destructive bg-destructive/5",
         )}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -170,14 +152,38 @@ export function FileUpload({
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
       >
-        <div className="flex flex-col items-center justify-center text-center">
-          <UploadIcon className="h-10 w-10 text-muted-foreground mb-2" />
-          <p className="text-sm font-medium">Drag & drop your resume here or click to browse</p>
-          <p className="text-xs text-muted-foreground mt-1">Supports PDF, DOC, DOCX up to {maxSize}MB</p>
-          {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-        </div>
-        <input ref={inputRef} type="file" accept={accept} onChange={handleChange} className="hidden" />
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          onChange={handleChange}
+          className="hidden"
+          multiple={multiple}
+          disabled={isUploading}
+        />
+
+        {isUploading ? (
+          <div className="flex flex-col items-center space-y-2 py-4">
+            <Loader2 className="h-8 w-8 text-primary animate-spin" />
+            <p className="text-sm font-medium">Uploading file...</p>
+            <Progress value={uploadProgress} className="w-48 h-2" />
+            <p className="text-xs text-muted-foreground">{uploadProgress}% complete</p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center space-y-2 py-4">
+            <UploadIcon className="h-8 w-8 text-muted-foreground" />
+            <p className="text-sm font-medium">Drag & drop your file here</p>
+            <p className="text-xs text-muted-foreground">
+              or <span className="text-primary font-medium">click to browse</span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Max file size: {maxSize}MB {accept !== "*/*" && `(${accept})`}
+            </p>
+          </div>
+        )}
       </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   )
 }

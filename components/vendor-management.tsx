@@ -10,12 +10,20 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Trash2, Edit, Plus, ArrowUpDown, Globe, ChevronLeft, ChevronRight } from "lucide-react"
+import { Trash2, Edit, Plus, ArrowUpDown, Globe, ChevronLeft, ChevronRight, X } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Steps } from "@/components/ui/steps"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface VendorManagementProps {
   showAddDialog?: boolean
@@ -37,6 +45,7 @@ export function VendorManagement({ showAddDialog = false, onCloseAddDialog }: Ve
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterCategory, setFilterCategory] = useState<string>("all")
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
 
   const [formData, setFormData] = useState({
     name: "",
@@ -142,6 +151,10 @@ export function VendorManagement({ showAddDialog = false, onCloseAddDialog }: Ve
     })
     setEditingVendor(vendor)
     setCurrentStep(1)
+  }
+
+  const handleViewVendor = (vendor: Vendor) => {
+    setSelectedVendor(vendor)
   }
 
   const addContact = () => {
@@ -376,7 +389,7 @@ export function VendorManagement({ showAddDialog = false, onCloseAddDialog }: Ve
             {formData.contacts.length > 0 && (
               <div className="space-y-2">
                 <Label>Added Contacts</Label>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
+                <div className="space-y-2 max-h-[240px] overflow-y-auto">
                   {formData.contacts.map((contact) => (
                     <div key={contact.id} className="flex items-center justify-between p-3 border rounded">
                       <div>
@@ -521,7 +534,11 @@ export function VendorManagement({ showAddDialog = false, onCloseAddDialog }: Ve
               </TableHeader>
               <TableBody>
                 {sortedVendors.map((vendor) => (
-                  <TableRow key={vendor.id}>
+                  <TableRow
+                    key={vendor.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleViewVendor(vendor)}
+                  >
                     <TableCell className="font-medium">{vendor.name}</TableCell>
                     <TableCell>{vendor.company}</TableCell>
                     <TableCell>{vendor.email}</TableCell>
@@ -533,6 +550,7 @@ export function VendorManagement({ showAddDialog = false, onCloseAddDialog }: Ve
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center text-blue-600 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           <Globe className="h-3 w-3 mr-1" />
                           Website
@@ -546,12 +564,26 @@ export function VendorManagement({ showAddDialog = false, onCloseAddDialog }: Ve
                     <TableCell>
                       <Badge variant={vendor.status === "active" ? "default" : "secondary"}>{vendor.status}</Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(vendor)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEdit(vendor)
+                          }}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => deleteVendor(vendor.id)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteVendor(vendor.id)
+                          }}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -564,6 +596,7 @@ export function VendorManagement({ showAddDialog = false, onCloseAddDialog }: Ve
         </CardContent>
       </Card>
 
+      {/* Add/Edit Vendor Dialog */}
       <Dialog
         open={showAddDialog || !!editingVendor}
         onOpenChange={(open) => {
@@ -574,60 +607,223 @@ export function VendorManagement({ showAddDialog = false, onCloseAddDialog }: Ve
           }
         }}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl h-[600px] flex flex-col overflow-hidden p-0">
+          <DialogHeader className="p-6 pb-2">
             <DialogTitle>{editingVendor ? "Edit Vendor" : "Add New Vendor"}</DialogTitle>
             <DialogDescription>
               {editingVendor ? "Update vendor information" : "Add a new vendor to your system"}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <Steps steps={steps} currentStep={currentStep} onStepClick={setCurrentStep} />
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="px-6 pt-2">
+              <Steps steps={steps} currentStep={currentStep} onStepClick={setCurrentStep} />
+            </div>
 
-            <div className="min-h-[400px]">{renderStepContent()}</div>
+            <div className="flex-1 px-6 overflow-y-auto">{renderStepContent()}</div>
 
-            <div className="flex justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={prevStep}
-                disabled={currentStep === 1}
-                className="flex items-center gap-2"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-
-              <div className="flex gap-2">
+            <DialogFooter className="p-6 pt-4 border-t">
+              <div className="flex justify-between w-full">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    onCloseAddDialog?.()
-                    setEditingVendor(null)
-                    resetForm()
-                  }}
+                  onClick={prevStep}
+                  disabled={currentStep === 1}
+                  className="flex items-center gap-2"
                 >
-                  Cancel
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
                 </Button>
 
-                {currentStep < steps.length ? (
+                <div className="flex gap-2">
                   <Button
                     type="button"
-                    onClick={nextStep}
-                    disabled={!canProceedToNext()}
-                    className="flex items-center gap-2"
+                    variant="outline"
+                    onClick={() => {
+                      onCloseAddDialog?.()
+                      setEditingVendor(null)
+                      resetForm()
+                    }}
                   >
-                    Next
-                    <ChevronRight className="h-4 w-4" />
+                    Cancel
                   </Button>
-                ) : (
-                  <Button type="submit">{editingVendor ? "Update Vendor" : "Add Vendor"}</Button>
-                )}
+
+                  {currentStep < steps.length ? (
+                    <Button
+                      type="button"
+                      onClick={nextStep}
+                      disabled={!canProceedToNext()}
+                      className="flex items-center gap-2"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button type="submit">{editingVendor ? "Update Vendor" : "Add Vendor"}</Button>
+                  )}
+                </div>
               </div>
-            </div>
+            </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Vendor Detail Dialog */}
+      <Dialog open={!!selectedVendor} onOpenChange={(open) => !open && setSelectedVendor(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden p-0">
+          <DialogHeader className="p-6 pb-2 flex flex-row items-center justify-between">
+            <div>
+              <DialogTitle className="text-xl">{selectedVendor?.company}</DialogTitle>
+              <DialogDescription>
+                <Badge variant={selectedVendor?.status === "active" ? "default" : "secondary"} className="mt-1">
+                  {selectedVendor?.status}
+                </Badge>
+              </DialogDescription>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setSelectedVendor(null)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </DialogHeader>
+
+          {selectedVendor && (
+            <div className="flex-1 overflow-y-auto p-6 pt-2">
+              <Tabs defaultValue="details">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="details">Details</TabsTrigger>
+                  <TabsTrigger value="contacts">Contacts ({selectedVendor.contacts.length})</TabsTrigger>
+                  <TabsTrigger value="notes">Notes</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="details" className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground">Vendor Name</h3>
+                      <p className="text-base">{selectedVendor.name}</p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground">Company</h3>
+                      <p className="text-base">{selectedVendor.company}</p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground">Email</h3>
+                      <p className="text-base">{selectedVendor.email}</p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground">Phone</h3>
+                      <p className="text-base">{selectedVendor.phone}</p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground">Website</h3>
+                      <p className="text-base">
+                        {selectedVendor.website ? (
+                          <a
+                            href={selectedVendor.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline flex items-center"
+                          >
+                            <Globe className="h-3 w-3 mr-1" />
+                            {selectedVendor.website}
+                          </a>
+                        ) : (
+                          "-"
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground">Category</h3>
+                      <p className="text-base">
+                        {selectedVendor.category ? <Badge variant="outline">{selectedVendor.category}</Badge> : "-"}
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <h3 className="text-sm font-medium text-muted-foreground">Address</h3>
+                      <p className="text-base">{selectedVendor.address || "-"}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <h3 className="text-sm font-medium text-muted-foreground">Created At</h3>
+                      <p className="text-base">{selectedVendor.createdAt.toLocaleDateString()}</p>
+                    </div>
+                    {selectedVendor.updatedAt && (
+                      <div className="col-span-2">
+                        <h3 className="text-sm font-medium text-muted-foreground">Last Updated</h3>
+                        <p className="text-base">{selectedVendor.updatedAt.toLocaleDateString()}</p>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="contacts">
+                  <div className="space-y-4">
+                    {selectedVendor.contacts.length > 0 ? (
+                      selectedVendor.contacts.map((contact) => (
+                        <Card key={contact.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="flex items-center">
+                                  <h3 className="font-medium">{contact.name}</h3>
+                                  {contact.isMainContact && (
+                                    <Badge className="ml-2" variant="default">
+                                      Main Contact
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {contact.email} • {contact.phone}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {contact.designation}
+                                  {contact.department ? ` • ${contact.department}` : ""}
+                                </p>
+                                {contact.lastContactedDate && (
+                                  <p className="text-xs text-muted-foreground mt-2">
+                                    Last contacted: {contact.lastContactedDate.toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    ) : (
+                      <p className="text-muted-foreground text-center py-8">No contacts added</p>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="notes">
+                  <div className="p-4 bg-muted/30 rounded-lg min-h-[200px]">
+                    {selectedVendor.notes ? (
+                      <p className="whitespace-pre-wrap">{selectedVendor.notes}</p>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-8">No notes available</p>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+
+          <DialogFooter className="p-6 pt-4 border-t">
+            <div className="flex justify-between w-full">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (selectedVendor) {
+                    handleEdit(selectedVendor)
+                    setSelectedVendor(null)
+                  }
+                }}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Vendor
+              </Button>
+              <Button variant="default" onClick={() => setSelectedVendor(null)}>
+                Close
+              </Button>
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
